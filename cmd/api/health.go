@@ -1,9 +1,18 @@
 package main
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
 
 func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"available"}`))
+	data := map[string]string{
+		"status":  "available",
+		"version": "1.0.0",
+		"env":     app.config.env,
+	}
+	if err := writeJson(w, http.StatusOK, data); err != nil {
+		log.Print("failed to write health check response", "error", err)
+		writeJson(w, http.StatusInternalServerError, err.Error())
+	}
 }

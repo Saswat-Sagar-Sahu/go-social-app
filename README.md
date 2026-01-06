@@ -4,12 +4,13 @@ A simple social networking backend API built with Go, providing endpoints for us
 
 ## Features
 
-- User registration and management
-- Post creation with tags
 - Health check endpoint
+- Post creation with tags support
+- User registration and management 
 - PostgreSQL database integration
 - Environment-based configuration
 - Docker support for database
+- Database migrations with golang-migrate
 
 ## Tech Stack
 
@@ -46,7 +47,7 @@ Create a `.env` file in the root directory with the following variables:
 
 ```env
 # Server configuration
-ADDRESS=:8081
+ADDRESS=:8080
 
 # Database configuration
 DB_ADDR=postgres://admin:admin123@localhost:5432/social?sslmode=disable
@@ -73,6 +74,40 @@ DB_MAX_IDLE_TIME=15m
 
 If you prefer to set up PostgreSQL manually, ensure you have a database running and update the `DB_ADDR` in your `.env` file accordingly.
 
+## Database Migrations
+
+This project uses [golang-migrate](https://github.com/golang-migrate/migrate) for database schema migrations.
+
+### Install golang-migrate
+
+```bash
+# Using Homebrew (macOS)
+brew install golang-migrate
+
+# Or download from GitHub releases
+# Visit: https://github.com/golang-migrate/migrate/releases
+```
+
+### Run Migrations
+
+After setting up the database, run the migrations to create the necessary tables:
+
+```bash
+# Run all pending migrations
+migrate -path=cmd/migrate/migrations -database="postgres://admin:admin123@localhost:5432/social?sslmode=disable" up
+
+# Check migration status
+migrate -path=cmd/migrate/migrations -database="postgres://admin:admin123@localhost:5432/social?sslmode=disable" version
+
+# Rollback migrations if needed
+migrate -path=cmd/migrate/migrations -database="postgres://admin:admin123@localhost:5432/social?sslmode=disable" down 1
+```
+
+**Note**: If you encounter path issues, use the absolute path:
+```bash
+migrate -path=/path/to/your/project/cmd/migrate/migrations -database="postgres://admin:admin123@localhost:5432/social?sslmode=disable" up
+```
+
 ## Running the Application
 
 Run the API server:
@@ -89,15 +124,31 @@ The server will start on the address specified in the `ADDRESS` environment vari
 - **GET** `/v1/health`
   - Returns server status
 
+### Posts
+- **POST** `/v1/posts`
+  - Create a new post
+  - Request body: `{"title": "string", "content": "string"}`
+  - Response: Created post object
+
 ### Users
 - **POST** `/v1/users` (planned)
   - Create a new user
 
-### Posts
-- **POST** `/v1/posts` (planned)
-  - Create a new post
+*Note: Post creation is now implemented. User creation endpoints are planned for future development.*
 
-*Note: Currently, only the health check endpoint is implemented. User and post creation endpoints are planned for future development.*
+## Testing the API
+
+### Health Check
+```bash
+curl http://localhost:8081/v1/health
+```
+
+### Create a Post
+```bash
+curl -X POST http://localhost:8081/v1/posts \
+  -H "Content-Type: application/json" \
+  -d '{"title": "My First Post", "content": "This is the content of my post"}'
+```
 
 ## Development
 

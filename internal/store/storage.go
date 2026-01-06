@@ -14,6 +14,10 @@ type Storage struct {
 	}
 }
 
+func (s Storage) Post() {
+	panic("unimplemented")
+}
+
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
 		Posts: &PostStore{db: db},

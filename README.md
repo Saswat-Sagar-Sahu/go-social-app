@@ -108,15 +108,30 @@ migrate -path=cmd/migrate/migrations -database="postgres://admin:admin123@localh
 migrate -path=/path/to/your/project/cmd/migrate/migrations -database="postgres://admin:admin123@localhost:5432/social?sslmode=disable" up
 ```
 
+
 ## Running the Application
 
-Run the API server:
+You can run the API server directly:
 
 ```bash
 go run cmd/api/*.go
 ```
 
-The server will start on the address specified in the `ADDRESS` environment variable (default: `:8081`).
+Or use [Air](https://github.com/air-verse/air) for automatic live-reloading during development:
+
+### Using Air for Live Reload
+
+1. **Install Air** (if not already installed):
+  ```bash
+  go install github.com/air-verse/air@latest
+  ```
+2. **Start the development server with Air:**
+  ```bash
+  air
+  ```
+  Air will watch your Go files and automatically restart the server on code changes.
+
+The server will start on the address specified in the `ADDRESS` environment variable (default: `:8080`).
 
 ## API Endpoints
 
@@ -140,14 +155,7 @@ The server will start on the address specified in the `ADDRESS` environment vari
 
 ### Health Check
 ```bash
-curl http://localhost:8081/v1/health
-```
-
-### Create a Post
-```bash
-curl -X POST http://localhost:8081/v1/posts \
-  -H "Content-Type: application/json" \
-  -d '{"title": "My First Post", "content": "This is the content of my post"}'
+curl http://localhost:8080/v1/health
 ```
 
 ## Development

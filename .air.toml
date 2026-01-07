@@ -1,0 +1,28 @@
+# https://github.com/cosmtrek/air
+# Config file for Air (live reload for Go apps)
+
+# Working directory
+root = "."
+
+# Watch these directories for changes
+[include]
+  dirs = ["cmd", "internal"]
+  exts = [".go"]
+  ignore = ["tmp", "bin", "docs", "scripts"]
+
+# Exclude these files/directories
+[exclude]
+  dirs = ["vendor", "tmp", "bin"]
+
+# Command to run
+[build]
+  cmd = "go run cmd/api/*.go"
+  bin = "tmp/main"
+  delay = 1000 # ms
+  log = "air.log"
+
+[color]
+  main = "yellow"
+  watcher = "cyan"
+  build = "green"
+  runner = "magenta"

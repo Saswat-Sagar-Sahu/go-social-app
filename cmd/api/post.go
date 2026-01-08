@@ -10,18 +10,23 @@ import (
 )
 
 type createPostRequest struct {
-	Title   string   `json:"title"`
-	Content string   `json:"content"`
+	Title   string   `json:"title" validate:"required"`
+	Content string   `json:"content" validate:"required,max=1000"`
 	Tags    []string `json:"tags"`
 }
 
 func (app *application) createPostsHandler(w http.ResponseWriter, r *http.Request) {
 	var payLoad createPostRequest
 	if err := readJson(r, &payLoad); err != nil {
-		writeJsonError(w, http.StatusBadRequest, err.Error())
+		app.badRequestResponse(w, r, err)
 		return
 	}
 	ctx := r.Context()
+
+	if err := Validate.Struct(payLoad); err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
 
 	post := &store.Post{
 		Title:   payLoad.Title,
@@ -32,12 +37,12 @@ func (app *application) createPostsHandler(w http.ResponseWriter, r *http.Reques
 
 	if err := app.Store.Posts.Create(ctx, post); err != nil {
 		log.Println(err)
-		writeJsonError(w, http.StatusInternalServerError, "failed to create post")
+		app.statusInternalServerError(w, r, err)
 		return
 	}
 
 	if err := writeJson(w, http.StatusCreated, post); err != nil {
-		writeJsonError(w, http.StatusInternalServerError, err.Error())
+		app.statusInternalServerError(w, r, err)
 		return
 	}
 }
@@ -47,17 +52,22 @@ func (app *application) getPostsHandler(w http.ResponseWriter, r *http.Request) 
 	postIDStr := chi.URLParam(r, "postId")
 	postID, err := strconv.ParseInt(postIDStr, 10, 64)
 	if err != nil {
-		writeJsonError(w, http.StatusBadRequest, "invalid post ID")
+		app.statusInternalServerError(w, r, err)
 		return
 	}
 	post, err := app.Store.Posts.GetByID(ctx, postID)
 	if err != nil {
 		log.Println(err)
-		writeJsonError(w, http.StatusNotFound, "No record found"+postIDStr)
+		switch err {
+		case store.ErrNotFound:
+			app.notFoundResponse(w, r, err)
+		default:
+			app.statusInternalServerError(w, r, err)
+		}
 		return
 	}
 	if err := writeJson(w, http.StatusOK, post); err != nil {
-		writeJsonError(w, http.StatusInternalServerError, err.Error())
+		app.statusInternalServerError(w, r, err)
 		return
 	}
 }

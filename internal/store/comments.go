@@ -78,3 +78,52 @@ func (s *CommentStore) GetByUserId(ctx context.Context, userID int64) (error, *C
 	}
 	return nil, comment
 }
+
+func (s *CommentStore) GetByCommentId(ctx context.Context, commentID int64) (error, *Comment) {
+	query := `SELECT id, post_id, user_id, content, created_at FROM comments WHERE id = $1 order by created_at desc`
+
+	comment := &Comment{}
+	err := s.db.QueryRowContext(ctx, query, commentID).Scan(
+		&comment.ID,
+		&comment.PostID,
+		&comment.UserID,
+		&comment.Content,
+		&comment.CreatedAt,
+	)
+	if err != nil {
+		switch err {
+		case sql.ErrNoRows:
+			return ErrNotFound, nil
+		default:
+			return err, nil
+		}
+	}
+	return nil, comment
+}
+
+func (s *CommentStore) DeleteByID(ctx context.Context, commentID int64) error {
+	query := `DELETE FROM comments WHERE id = $1`
+
+	_, err := s.db.ExecContext(ctx, query, commentID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CommentStore) UpdateComment(ctx context.Context, comment *Comment) error {
+	query := `UPDATE comments SET content = $1, post_id = $2, user_id = $3 WHERE id = $4 RETURNING id`
+
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		comment.Content,
+		comment.PostID,
+		comment.UserID,
+		comment.ID,
+	).Scan(&comment.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

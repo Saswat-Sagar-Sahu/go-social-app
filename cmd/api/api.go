@@ -12,20 +12,20 @@ import (
 
 type application struct {
 	config config
-	Store store.Storage
+	Store  store.Storage
 }
 
 type config struct {
 	address string
-	db dbConfig
-	env   string
+	db      dbConfig
+	env     string
 }
 
 type dbConfig struct {
-	addr string
+	addr         string
 	maxOpenConns int
 	maxIdleConns int
-	maxIdleTime string
+	maxIdleTime  string
 }
 
 func (app *application) mount() http.Handler {
@@ -41,7 +41,7 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/posts", func(r chi.Router) {
 			r.Post("/", app.createPostsHandler)
-			r.Route("/{postId}", func (r chi.Router) {
+			r.Route("/{postId}", func(r chi.Router) {
 				r.Get("/", app.getPostsHandler)
 			})
 		})
@@ -49,6 +49,8 @@ func (app *application) mount() http.Handler {
 			r.Post("/", app.createCommentsHandler)
 			r.Get("/post/{postId}", app.getCommentsByPostIdHandler)
 			r.Get("/user/{userId}", app.getCommentsByUserIdHandler)
+			r.Delete("/{commentId}", app.deleteCommentByIdHandler)
+			r.Put("/{commentId}", app.updateCommentByIdHandler)
 		})
 	})
 	return r

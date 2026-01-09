@@ -9,6 +9,7 @@ type Storage struct {
 	Posts interface {
 		Create(context.Context, *Post) error
 		GetByID(context.Context, int64) (*Post, error)
+		GetUserFeed(context.Context, int64) ([]*Post, error)
 	}
 	Users interface {
 		Create(context.Context, *User) error
@@ -22,6 +23,10 @@ type Storage struct {
 		DeleteByID(context.Context, int64) error
 		UpdateComment(context.Context, *Comment) error
 	}
+	Followers interface {
+		AddFollower(context.Context, int64, int64) error
+		RemoveFollower(context.Context, int64, int64) error
+	}
 }
 
 func (s Storage) Post() {
@@ -30,8 +35,9 @@ func (s Storage) Post() {
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Posts:    &PostStore{db: db},
-		Users:    &UsersStore{db: db},
-		Comments: &CommentStore{db: db},
+		Posts:     &PostStore{db: db},
+		Users:     &UsersStore{db: db},
+		Comments:  &CommentStore{db: db},
+		Followers: &FollowersStore{db: db},
 	}
 }

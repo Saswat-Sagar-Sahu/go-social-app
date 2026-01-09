@@ -91,3 +91,55 @@ func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 	}
 	return post, nil
 }
+
+func (s *PostStore) GetUserFeed(ctx context.Context, userID int64) ([]*Post, error) {
+	// query := `SELECT p.id, p.content, p.title, p.user_id, p.tags, p.created_at, p.updated_at
+	// FROM posts p
+	// JOIN followers f ON p.user_id = f.user_id
+	// WHERE f.follower_id = $1
+	// ORDER BY p.created_at DESC`
+	query := `
+    SELECT
+        p.id, p.content, p.title, p.user_id, p.tags, p.created_at, p.updated_at,
+        COALESCE(MAX(c.created_at), p.created_at) AS last_activity
+    FROM posts p
+    LEFT JOIN followers f ON p.user_id = f.user_id AND f.follower_id = $1
+    LEFT JOIN comments c ON c.post_id = p.id
+        AND c.user_id IN (SELECT user_id FROM followers WHERE follower_id = $1)
+    WHERE f.follower_id = $1 OR c.user_id IS NOT NULL
+    GROUP BY p.id, p.content, p.title, p.user_id, p.tags, p.created_at, p.updated_at
+    ORDER BY last_activity DESC
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []*Post
+	for rows.Next() {
+		post := &Post{}
+		var lastActivity sql.NullString
+		err := rows.Scan(
+			&post.ID,
+			&post.Content,
+			&post.Title,
+			&post.UserID,
+			pq.Array(&post.Tags),
+			&post.CreatedAt,
+			&post.UpdatedAt,
+			&lastActivity,
+		)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}

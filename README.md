@@ -133,6 +133,15 @@ Or use [Air](https://github.com/air-verse/air) for automatic live-reloading duri
 
 The server will start on the address specified in the `ADDRESS` environment variable (default: `:8080`).
 
+### Seeding the database
+
+Prerequisites: database is running and migrations applied. You can set the DB URL in `.env` or via `DB_ADDR`.
+
+Quick (run without building):
+```bash
+go run ./cmd/seed -users=500 -posts=1000
+```
+
 ## API Endpoints
 
 ### Health Check

@@ -27,6 +27,11 @@ type Storage struct {
 		AddFollower(context.Context, int64, int64) error
 		RemoveFollower(context.Context, int64, int64) error
 	}
+	Tokens interface {
+		Create(context.Context, *Token) error
+		GetByToken(context.Context, string) (*Token, error)
+		DeleteByToken(context.Context, string) error
+	}
 }
 
 func (s Storage) Post() {
@@ -39,5 +44,6 @@ func NewStorage(db *sql.DB) Storage {
 		Users:     &UsersStore{db: db},
 		Comments:  &CommentStore{db: db},
 		Followers: &FollowersStore{db: db},
+		Tokens:    &TokenStore{db: db},
 	}
 }

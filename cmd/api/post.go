@@ -15,6 +15,18 @@ type createPostRequest struct {
 	Tags    []string `json:"tags"`
 }
 
+// createPostsHandler handles the creation of a new post
+//
+//	@Summary		Create a new post
+//	@Description	Create a new post with title, content, and tags
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			post	body		createPostRequest	true	"Post data"
+//	@Success		201		{object}	store.Post
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/posts/ [post]
 func (app *application) createPostsHandler(w http.ResponseWriter, r *http.Request) {
 	var payLoad createPostRequest
 	if err := readJson(r, &payLoad); err != nil {

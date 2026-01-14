@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	// "github.com/Saswat-Sagar-Sahu/Social/docs" // This is required for swag to find docs
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -16,9 +17,11 @@ type application struct {
 }
 
 type config struct {
-	address string
-	db      dbConfig
-	env     string
+	address                      string
+	apiURL                       string
+	db                           dbConfig
+	env                          string
+	activationTokenExpiryMinutes int
 }
 
 type dbConfig struct {
@@ -29,6 +32,7 @@ type dbConfig struct {
 }
 
 func (app *application) mount() http.Handler {
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -37,6 +41,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Recoverer)
 
 	r.Route("/v1", func(r chi.Router) {
+
 		r.Get("/health", app.healthCheckHandler)
 
 		r.Route("/posts", func(r chi.Router) {
@@ -63,6 +68,10 @@ func (app *application) mount() http.Handler {
 			r.Route("/feed", func(r chi.Router) {
 				r.Get("/", app.getUserFeedHandler)
 			})
+
+			// registration and activation
+			r.Post("/register", app.registerUserHandler)
+			r.Post("/activate", app.activateUserHandler)
 		})
 	})
 	return r

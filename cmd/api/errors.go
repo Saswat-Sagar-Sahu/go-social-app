@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 )
+
+var ErrInvalidRequest = errors.New("invalid request payload")
 
 func (app *application) statusInternalServerError(w http.ResponseWriter, r *http.Request, err error) {
 

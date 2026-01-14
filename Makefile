@@ -29,3 +29,7 @@ migration:
 # Silence unknown targets (so passing the migration name as a target doesn't error)
 %:
 	@:
+
+.PHONY: gen-docs
+gen-docs:
+	swag init -g ./api/main.go -d cmd,internal && swag fmt

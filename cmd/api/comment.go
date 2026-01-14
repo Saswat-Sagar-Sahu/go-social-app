@@ -67,6 +67,18 @@ func (app *application) createCommentsHandler(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// getCommentsByPostIdHandler retrieves comments for a specific post
+//
+//	@Summary		Retrieve comments by post ID
+//	@Description	Get comments for a specific post
+//	@Tags			comments
+//	@Accept			json
+//	@Produce		json
+//	@Param			postId	path		int64	true	"Post ID"
+//	@Success		200		{array}		store.Comment
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/comments/post/{postId} [get]
 func (app *application) getCommentsByPostIdHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	postID, err := parseInt64Param(r, chi.URLParam(r, "postId"))

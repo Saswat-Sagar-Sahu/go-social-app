@@ -2,6 +2,16 @@ package main
 
 import "net/http"
 
+// getUserFeedHandler retrieves the feed for a specific user
+//
+//	@Summary		Retrieve user feed
+//	@Description	Get the feed for a specific user
+//	@Tags			feed
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{array}		store.Post
+//	@Failure		500	{object}	errorResponse
+//	@Router			/feed [get]
 func (app *application) getUserFeedHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

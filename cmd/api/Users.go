@@ -1,12 +1,31 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
+	"time"
+
+	"log"
 
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
+// GetUsersHandler retrieves a user by ID
+//
+//	@Summary		Retrieve a user by ID
+//	@Description	Get a user by their unique ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			userId	path		int64	true	"User ID"
+//	@Success		200		{object}	store.User
+//	@Failure		400		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/users/{userId} [get]
 func (app *application) getUsersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID, err := parseInt64Param(r, chi.URLParam(r, "userId"))
@@ -30,6 +49,100 @@ func (app *application) getUsersHandler(w http.ResponseWriter, r *http.Request) 
 		app.statusInternalServerError(w, r, err)
 		return
 	}
+}
+
+func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var payload struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := readJson(r, &payload); err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	if payload.Username == "" || payload.Email == "" || payload.Password == "" {
+		app.badRequestResponse(w, r, ErrInvalidRequest)
+		return
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	if err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+
+	user := &store.User{
+		Username: payload.Username,
+		Email:    payload.Email,
+		Password: string(hashed),
+	}
+	if err := app.Store.Users.Create(ctx, user); err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+
+	// generate activation token
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+	token := hex.EncodeToString(b)
+
+	expiry := time.Now().Add(time.Duration(app.config.activationTokenExpiryMinutes) * time.Minute)
+	t := &store.Token{UserID: user.ID, Token: token, ExpiresAt: expiry}
+	if err := app.Store.Tokens.Create(ctx, t); err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+
+	// for now, log the token instead of sending email
+	log.Printf("Activation token for %s: %s", user.Email, token)
+
+	if err := writeJson(w, http.StatusCreated, map[string]interface{}{"id": user.ID, "email": user.Email}); err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+}
+
+func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var payload struct {
+		Token string `json:"token"`
+	}
+	if err := readJson(r, &payload); err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	if payload.Token == "" {
+		app.badRequestResponse(w, r, ErrInvalidRequest)
+		return
+	}
+
+	t, err := app.Store.Tokens.GetByToken(ctx, payload.Token)
+	if err != nil {
+		switch err {
+		case store.ErrNotFound:
+			app.notFoundResponse(w, r, err)
+		default:
+			app.statusInternalServerError(w, r, err)
+		}
+		return
+	}
+
+	if time.Now().After(t.ExpiresAt) {
+		app.badRequestResponse(w, r, ErrInvalidRequest)
+		return
+	}
+
+	if err := app.Store.Tokens.DeleteByToken(ctx, payload.Token); err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {

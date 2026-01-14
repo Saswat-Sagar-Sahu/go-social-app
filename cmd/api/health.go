@@ -5,6 +5,14 @@ import (
 	"net/http"
 )
 
+// healthCheckHandler provides a simple health check endpoint.
+//
+//	@Summary		Health Check
+//	@Description	Checks the health status of the API
+//	@Tags			health
+//	@Produce		json
+//	@Success		200	{object}	map[string]string
+//	@Router			/health [get]
 func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	data := map[string]string{
 		"status":  "available",

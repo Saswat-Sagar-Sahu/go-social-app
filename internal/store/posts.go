@@ -12,13 +12,13 @@ import (
 )
 
 type Post struct {
-	ID        int64         `json:"id"`
-	Content   string        `json:"content"`
-	Title     string        `json:"title"`
-	UserID    sql.NullInt64 `json:"user_id"`
-	Tags      []string      `json:"tags"`
-	CreatedAt string        `json:"created_at"`
-	UpdatedAt string        `json:"updated_at"`
+	ID        int64    `json:"id"`
+	Content   string   `json:"content"`
+	Title     string   `json:"title"`
+	UserID    *int64   `json:"user_id,omitempty"`
+	Tags      []string `json:"tags"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
 }
 
 // ErrNotFound is returned when a requested entity is not found in the store.
@@ -30,12 +30,12 @@ type PostStore struct {
 
 func (s *PostStore) Create(ctx context.Context, post *Post) error {
 	var userID int64
-	if post.UserID.Valid && post.UserID.Int64 != 0 {
-		userID = post.UserID.Int64
+	if post.UserID != nil && *post.UserID != 0 {
+		userID = *post.UserID
 	} else {
 		// pick a random existing user id between 1 and 5
 		userID = randomInt(1, 5)
-		post.UserID = sql.NullInt64{Int64: userID, Valid: true}
+		post.UserID = &userID
 	}
 
 	log.Printf("User Id : %d", userID)
@@ -72,11 +72,12 @@ func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 	query := `SELECT id, content, title, user_id, tags, created_at, updated_at FROM posts WHERE id = $1`
 
 	post := &Post{}
+	var userID sql.NullInt64
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&post.ID,
 		&post.Content,
 		&post.Title,
-		&post.UserID,
+		&userID,
 		pq.Array(&post.Tags),
 		&post.CreatedAt,
 		&post.UpdatedAt,
@@ -89,6 +90,13 @@ func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {
 			return nil, err
 		}
 	}
+	if userID.Valid {
+		v := userID.Int64
+		post.UserID = &v
+	} else {
+		post.UserID = nil
+	}
+
 	return post, nil
 }
 
@@ -121,11 +129,12 @@ func (s *PostStore) GetUserFeed(ctx context.Context, userID int64) ([]*Post, err
 	for rows.Next() {
 		post := &Post{}
 		var lastActivity sql.NullString
+		var userID sql.NullInt64
 		err := rows.Scan(
 			&post.ID,
 			&post.Content,
 			&post.Title,
-			&post.UserID,
+			&userID,
 			pq.Array(&post.Tags),
 			&post.CreatedAt,
 			&post.UpdatedAt,
@@ -133,6 +142,12 @@ func (s *PostStore) GetUserFeed(ctx context.Context, userID int64) ([]*Post, err
 		)
 		if err != nil {
 			return nil, err
+		}
+		if userID.Valid {
+			v := userID.Int64
+			post.UserID = &v
+		} else {
+			post.UserID = nil
 		}
 		posts = append(posts, post)
 	}

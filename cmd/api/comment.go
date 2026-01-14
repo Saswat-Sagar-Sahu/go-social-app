@@ -111,6 +111,18 @@ func parseInt64Param(_ *http.Request, s string) (int64, error) {
 	return postId, nil
 }
 
+// getCommentsByUserIdHandler retrieves comments made by a specific user
+//
+//	@Summary		Retrieve comments by user ID
+//	@Description	Get comments made by a specific user
+//	@Tags			comments
+//	@Accept			json
+//	@Produce		json
+//	@Param			userId	path		int64	true	"User ID"
+//	@Success		200		{array}		store.Comment
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/comments/user/{userId} [get]
 func (app *application) getCommentsByUserIdHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	commentID, err := parseInt64Param(r, chi.URLParam(r, "userId"))
@@ -134,6 +146,16 @@ func (app *application) getCommentsByUserIdHandler(w http.ResponseWriter, r *htt
 	}
 }
 
+// deleteCommentByIdHandler deletes a comment by its ID
+//
+//	@Summary		Delete a comment by ID
+//	@Description	Delete a comment by its unique ID
+//	@Tags			comments
+//	@Param			commentId	path		int64	true	"Comment ID"
+//	@Success		204
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/comments/{commentId} [delete]
 func (app *application) deleteCommentByIdHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	commentID, err := parseInt64Param(r, chi.URLParam(r, "commentId"))

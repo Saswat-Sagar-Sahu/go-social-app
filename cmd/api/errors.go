@@ -6,6 +6,11 @@ import (
 	"net/http"
 )
 
+// errorResponse represents a JSON error envelope returned by handlers.
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
 var ErrInvalidRequest = errors.New("invalid request payload")
 
 func (app *application) statusInternalServerError(w http.ResponseWriter, r *http.Request, err error) {

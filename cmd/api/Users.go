@@ -51,6 +51,18 @@ func (app *application) getUsersHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// registerUserHandler handles user registration
+//
+//	@Summary		Register a new user
+//	@Description	Register a new user with username, email, and password
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		object{username=string,email=string,password=string}	true	"User registration data"
+//	@Success		201		{object}	map[string]interface{}
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/users/register [post]
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var payload struct {
@@ -107,6 +119,19 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+// activateUserHandler handles user account activation
+//
+//	@Summary		Activate a user account
+//	@Description	Activate a user account using the provided token
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			activation	body		object{token=string}	true	"Activation token"
+//	@Success		202
+//	@Failure		400		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/users/activate [post]
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var payload struct {
@@ -145,6 +170,21 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// followUserHandler handles following a user
+//
+//	@Summary		Follow a user
+//	@Description	Follow a user by their ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			userId	path		int64	true	"User ID to follow"
+//	@Param			follower	body		object{follower_id=int64}	true	"Follower ID"
+//	@Success		204
+//	@Failure		400		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
+//	@Failure		409		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/users/{userId}/follow [post]
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID, err := parseInt64Param(r, chi.URLParam(r, "userId"))
@@ -175,6 +215,20 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// unfollowUserHandler handles unfollowing a user
+//
+//	@Summary		Unfollow a user
+//	@Description	Unfollow a user by their ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			userId	path		int64	true	"User ID to unfollow"
+//	@Param			follower	body		object{follower_id=int64}	true	"Follower ID"
+//	@Success		204
+//	@Failure		400		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/users/{userId}/unfollow [post]
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID, err := parseInt64Param(r, chi.URLParam(r, "userId"))

@@ -1,0 +1,462 @@
+basePath: /v1
+definitions:
+  main.createPostRequest:
+    properties:
+      content:
+        maxLength: 1000
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    required:
+    - content
+    - title
+    type: object
+  main.errorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  store.Comment:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      post_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  store.Post:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  store.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server for a social media application.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Social API
+  version: "1.0"
+paths:
+  /comments/{commentId}:
+    delete:
+      description: Delete a comment by its unique ID
+      parameters:
+      - description: Comment ID
+        format: int64
+        in: path
+        name: commentId
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Delete a comment by ID
+      tags:
+      - comments
+  /comments/post/{postId}:
+    get:
+      consumes:
+      - application/json
+      description: Get comments for a specific post
+      parameters:
+      - description: Post ID
+        format: int64
+        in: path
+        name: postId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/store.Comment'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Retrieve comments by post ID
+      tags:
+      - comments
+  /comments/user/{userId}:
+    get:
+      consumes:
+      - application/json
+      description: Get comments made by a specific user
+      parameters:
+      - description: User ID
+        format: int64
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/store.Comment'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Retrieve comments by user ID
+      tags:
+      - comments
+  /feed:
+    get:
+      consumes:
+      - application/json
+      description: Get the feed for a specific user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/store.Post'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Retrieve user feed
+      tags:
+      - feed
+  /health:
+    get:
+      description: Checks the health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health Check
+      tags:
+      - health
+  /posts/:
+    post:
+      consumes:
+      - application/json
+      description: Create a new post with title, content, and tags
+      parameters:
+      - description: Post data
+        in: body
+        name: post
+        required: true
+        schema:
+          $ref: '#/definitions/main.createPostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.Post'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Create a new post
+      tags:
+      - posts
+  /posts/{postId}:
+    get:
+      consumes:
+      - application/json
+      description: Get a post by its unique ID
+      parameters:
+      - description: Post ID
+        format: int64
+        in: path
+        name: postId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/store.Post'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Retrieve a post by ID
+      tags:
+      - posts
+  /users/{userId}:
+    get:
+      consumes:
+      - application/json
+      description: Get a user by their unique ID
+      parameters:
+      - description: User ID
+        format: int64
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/store.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Retrieve a user by ID
+      tags:
+      - users
+  /users/{userId}/follow:
+    post:
+      consumes:
+      - application/json
+      description: Follow a user by their ID
+      parameters:
+      - description: User ID to follow
+        format: int64
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Follower ID
+        in: body
+        name: follower
+        required: true
+        schema:
+          properties:
+            follower_id:
+              format: int64
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Follow a user
+      tags:
+      - users
+  /users/{userId}/unfollow:
+    post:
+      consumes:
+      - application/json
+      description: Unfollow a user by their ID
+      parameters:
+      - description: User ID to unfollow
+        format: int64
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Follower ID
+        in: body
+        name: follower
+        required: true
+        schema:
+          properties:
+            follower_id:
+              format: int64
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Unfollow a user
+      tags:
+      - users
+  /users/activate:
+    post:
+      consumes:
+      - application/json
+      description: Activate a user account using the provided token
+      parameters:
+      - description: Activation token
+        in: body
+        name: activation
+        required: true
+        schema:
+          properties:
+            token:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Activate a user account
+      tags:
+      - users
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with username, email, and password
+      parameters:
+      - description: User registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+            username:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Register a new user
+      tags:
+      - users
+swagger: "2.0"

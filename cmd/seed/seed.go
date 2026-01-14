@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"log"
@@ -55,10 +54,11 @@ func main() {
 	log.Printf("Seeding %d posts...", *postsN)
 	for i := 1; i <= *postsN; i++ {
 		uid := int64(rand.Intn(*usersN) + 1)
+		uidCopy := uid
 		p := &store.Post{
 			Title:   fmt.Sprintf("Post %d", i),
 			Content: fmt.Sprintf("This is the content for post %d.", i),
-			UserID:  sql.NullInt64{Int64: uid, Valid: true},
+			UserID:  &uidCopy,
 			Tags:    []string{"seeded", "demo"},
 		}
 		if err := storeSvc.Posts.Create(ctx, p); err != nil {

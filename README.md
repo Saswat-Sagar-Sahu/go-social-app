@@ -142,6 +142,39 @@ Quick (run without building):
 go run ./cmd/seed -users=500 -posts=1000
 ```
 
+## Swagger API Docs
+
+This project uses `swag` (swaggo) to generate OpenAPI (Swagger) documentation from handler comments.
+
+1. Install the `swag` CLI (if not already installed):
+
+```bash
+go install github.com/swaggo/swag/cmd/swag@latest
+```
+
+2. Generate the docs package (run from the project root):
+
+```bash
+swag init -g cmd/api/main.go -o docs
+```
+
+3. Run the API server:
+
+```bash
+go run ./cmd/api
+```
+
+4. Open the Swagger UI in your browser:
+
+- Swagger UI: http://localhost:8080/swagger/index.html
+- Raw Swagger JSON: http://localhost:8080/swagger/doc.json
+
+Notes:
+- Handlers must have swag annotations (e.g. `@Summary`, `@Param`, `@Success`) for endpoints to appear in the generated docs.
+- If some models reference types like `sql.NullInt64`, prefer using simple exported types (e.g. `*int64`) or add type aliases so `swag` can generate schemas.
+- You can programmatically set `docs.SwaggerInfo.Host` and `docs.SwaggerInfo.BasePath` in `cmd/api/main.go` after loading your config so the generated docs reflect the runtime host/basePath.
+
+
 ## API Endpoints
 
 ### Health Check

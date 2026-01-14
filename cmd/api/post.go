@@ -59,12 +59,25 @@ func (app *application) createPostsHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// getPostsHandler retrieves a post by ID
+//
+//	@Summary		Retrieve a post by ID
+//	@Description	Get a post by its unique ID
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			postId	path		int64	true	"Post ID"
+//	@Success		200		{object}	store.Post
+//	@Failure		400		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Router			/posts/{postId} [get]
 func (app *application) getPostsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	postIDStr := chi.URLParam(r, "postId")
 	postID, err := strconv.ParseInt(postIDStr, 10, 64)
 	if err != nil {
-		app.statusInternalServerError(w, r, err)
+		app.badRequestResponse(w, r, err)
 		return
 	}
 	post, err := app.Store.Posts.GetByID(ctx, postID)

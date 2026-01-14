@@ -3,12 +3,13 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	// "github.com/Saswat-Sagar-Sahu/Social/docs" // This is required for swag to find docs
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type application struct {
@@ -73,6 +74,18 @@ func (app *application) mount() http.Handler {
 			r.Post("/register", app.registerUserHandler)
 			r.Post("/activate", app.activateUserHandler)
 		})
+	})
+
+	// Serve swagger UI and the generated swagger JSON
+	r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(app.config.apiURL+"/swagger/doc.json")))
+	r.Get("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		b, err := os.ReadFile("./docs/swagger.json")
+		if err != nil {
+			http.Error(w, "failed to read swagger json", http.StatusInternalServerError)
+			return
+		}
+		_, _ = w.Write(b)
 	})
 	return r
 }

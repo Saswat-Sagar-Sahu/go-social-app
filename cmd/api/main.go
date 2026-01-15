@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/Saswat-Sagar-Sahu/Social/internal/db"
+	"github.com/Saswat-Sagar-Sahu/Social/internal/email"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/env"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/joho/godotenv"
@@ -52,9 +53,16 @@ func main() {
 
 	store := store.NewStorage(db)
 
+	// try to construct SendGrid sender from environment; nil if not configured
+	sender, err := email.NewSendGridFromEnv()
+	if err != nil {
+		log.Printf("SendGrid not configured: %v", err)
+	}
+
 	app := &application{
 		cfg,
 		store,
+		sender,
 	}
 
 	mux := app.mount()

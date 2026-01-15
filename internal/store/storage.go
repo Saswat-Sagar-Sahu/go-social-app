@@ -32,6 +32,11 @@ type Storage struct {
 		GetByToken(context.Context, string) (*Token, error)
 		DeleteByToken(context.Context, string) error
 	}
+	Invitations interface {
+		Create(context.Context, *Invitation) error
+		GetByToken(context.Context, string) (*Invitation, error)
+		MarkAccepted(context.Context, string, int64) error
+	}
 }
 
 func (s Storage) Post() {
@@ -40,10 +45,11 @@ func (s Storage) Post() {
 
 func NewStorage(db *sql.DB) Storage {
 	return Storage{
-		Posts:     &PostStore{db: db},
-		Users:     &UsersStore{db: db},
-		Comments:  &CommentStore{db: db},
-		Followers: &FollowersStore{db: db},
-		Tokens:    &TokenStore{db: db},
+		Posts:       &PostStore{db: db},
+		Users:       &UsersStore{db: db},
+		Comments:    &CommentStore{db: db},
+		Followers:   &FollowersStore{db: db},
+		Tokens:      &TokenStore{db: db},
+		Invitations: &InvitationsStore{db: db},
 	}
 }

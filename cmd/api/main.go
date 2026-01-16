@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/Saswat-Sagar-Sahu/Social/internal/auth"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/db"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/email"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/env"
@@ -37,6 +38,8 @@ func main() {
 		},
 		env:                          env.GetString("ENVIRONMENT", "development"),
 		activationTokenExpiryMinutes: env.GetInt("ACTIVATION_TOKEN_EXPIRY_MINUTES", 60),
+		jwtSecret:                    env.GetString("JWT_SECRET", "secret"),
+		jwtExpiryMinutes:             env.GetInt("JWT_EXPIRY_MINUTES", 60),
 	}
 
 	db, err := db.New(
@@ -53,6 +56,9 @@ func main() {
 
 	store := store.NewStorage(db)
 
+	// construct auth service using JWT
+	authSvc := auth.NewJWTAuth(cfg.jwtSecret, cfg.jwtExpiryMinutes, store)
+
 	// try to construct SendGrid sender from environment; nil if not configured
 	sender, err := email.NewSendGridFromEnv()
 	if err != nil {
@@ -63,6 +69,7 @@ func main() {
 		cfg,
 		store,
 		sender,
+		authSvc,
 	}
 
 	mux := app.mount()

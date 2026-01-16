@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Saswat-Sagar-Sahu/Social/internal/auth"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/email"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -17,6 +18,7 @@ type application struct {
 	config config
 	Store  store.Storage
 	Email  email.Sender
+	Auth   auth.Authenticator
 }
 
 type config struct {
@@ -25,6 +27,8 @@ type config struct {
 	db                           dbConfig
 	env                          string
 	activationTokenExpiryMinutes int
+	jwtSecret                    string
+	jwtExpiryMinutes             int
 }
 
 type dbConfig struct {
@@ -37,6 +41,9 @@ type dbConfig struct {
 func (app *application) mount() http.Handler {
 
 	r := chi.NewRouter()
+
+	// enforce auth for unsafe methods globally
+	r.Use(app.methodAuthMiddleware)
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -69,11 +76,12 @@ func (app *application) mount() http.Handler {
 				r.Post("/unfollow", app.unfollowUserHandler)
 			})
 			r.Route("/feed", func(r chi.Router) {
-				r.Get("/", app.getUserFeedHandler)
+				r.With(app.authMiddleware).Get("/", app.getUserFeedHandler)
 			})
 
 			// registration and activation
 			r.Post("/register", app.registerUserHandler)
+			r.Post("/login", app.loginHandler)
 			r.Post("/activate", app.activateUserHandler)
 		})
 	})

@@ -12,6 +12,11 @@ type errorResponse struct {
 }
 
 var ErrInvalidRequest = errors.New("invalid request payload")
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
+func (app *application) unauthorizedResponse(w http.ResponseWriter, r *http.Request, err error) {
+	writeJsonError(w, http.StatusUnauthorized, err.Error())
+}
 
 func (app *application) statusInternalServerError(w http.ResponseWriter, r *http.Request, err error) {
 

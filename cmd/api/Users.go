@@ -10,7 +10,6 @@ import (
 
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // GetUsersHandler retrieves a user by ID
@@ -79,7 +78,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	hashed, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	hashed, err := app.Auth.HashPassword(payload.Password)
 	if err != nil {
 		app.statusInternalServerError(w, r, err)
 		return
@@ -114,6 +113,62 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	log.Printf("Activation token for %s: %s", user.Email, token)
 
 	if err := writeJson(w, http.StatusCreated, map[string]interface{}{"id": user.ID, "email": user.Email}); err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+}
+
+// loginHandler handles user login and returns a JWT
+//
+// @Summary Login
+// @Description Authenticate a user and return a JWT
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param credentials body object{email=string,password=string} true "Credentials"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /users/login [post]
+func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var payload struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := readJson(r, &payload); err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	if payload.Email == "" || payload.Password == "" {
+		app.badRequestResponse(w, r, ErrInvalidRequest)
+		return
+	}
+
+	user, err := app.Store.Users.GetByEmail(ctx, payload.Email)
+	if err != nil {
+		switch err {
+		case store.ErrNotFound:
+			app.unauthorizedResponse(w, r, ErrInvalidCredentials)
+		default:
+			app.statusInternalServerError(w, r, err)
+		}
+		return
+	}
+
+	if err := app.Auth.ComparePassword(user.Password, payload.Password); err != nil {
+		app.unauthorizedResponse(w, r, ErrInvalidCredentials)
+		return
+	}
+
+	token, err := app.Auth.GenerateToken(ctx, user.ID)
+	if err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+
+	if err := writeJson(w, http.StatusOK, map[string]string{"token": token}); err != nil {
 		app.statusInternalServerError(w, r, err)
 		return
 	}

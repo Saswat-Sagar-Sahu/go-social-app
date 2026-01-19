@@ -6,11 +6,12 @@ import (
 )
 
 type User struct {
-	ID        int64  `json:"id"`
-	Username  string `json:"username"`
-	Email     string `json:"email"`
-	Password  string `json:"-"`
-	CreatedAt string `json:"created_at"`
+	ID        int64    `json:"id"`
+	Username  string   `json:"username"`
+	Email     string   `json:"email"`
+	Password  string   `json:"-"`
+	CreatedAt string   `json:"created_at"`
+	Roles     []string `json:"roles,omitempty"`
 }
 
 type UsersStore struct {
@@ -34,6 +35,16 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 	if err != nil {
 		return err
 	}
+	// assign default role
+	if err := s.AssignRole(ctx, user.ID, "user"); err != nil {
+		return err
+	}
+	// populate roles slice
+	roles, err := s.GetRoles(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+	user.Roles = roles
 	return nil
 }
 
@@ -78,4 +89,40 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 		}
 	}
 	return user, nil
+}
+
+// GetRoles returns role names assigned to a user
+func (s *UsersStore) GetRoles(ctx context.Context, userID int64) ([]string, error) {
+	query := `SELECT r.name FROM roles r INNER JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = $1`
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var roles []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		roles = append(roles, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return roles, nil
+}
+
+// AssignRole assigns a role to a user by role name. It is idempotent.
+func (s *UsersStore) AssignRole(ctx context.Context, userID int64, roleName string) error {
+	query := `INSERT INTO user_roles (user_id, role_id) VALUES ($1, (SELECT id FROM roles WHERE name = $2)) ON CONFLICT DO NOTHING`
+	_, err := s.db.ExecContext(ctx, query, userID, roleName)
+	return err
+}
+
+// RemoveRole removes a role assignment from a user.
+func (s *UsersStore) RemoveRole(ctx context.Context, userID int64, roleName string) error {
+	query := `DELETE FROM user_roles WHERE user_id = $1 AND role_id = (SELECT id FROM roles WHERE name = $2)`
+	_, err := s.db.ExecContext(ctx, query, userID, roleName)
+	return err
 }

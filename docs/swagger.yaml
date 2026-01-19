@@ -1,5 +1,16 @@
 basePath: /v1
 definitions:
+  main.createCommentRequest:
+    properties:
+      content:
+        maxLength: 500
+        type: string
+      post_id:
+        type: integer
+    required:
+    - content
+    - post_id
+    type: object
   main.createPostRequest:
     properties:
       content:
@@ -60,6 +71,10 @@ definitions:
         type: string
       id:
         type: integer
+      roles:
+        items:
+          type: string
+        type: array
       username:
         type: string
     type: object
@@ -76,6 +91,40 @@ info:
   title: Swagger Social API
   version: "1.0"
 paths:
+  /comments/:
+    post:
+      consumes:
+      - application/json
+      description: Create a new comment on a post (authenticated)
+      parameters:
+      - description: Comment data
+        in: body
+        name: post
+        required: true
+        schema:
+          $ref: '#/definitions/main.createCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.Comment'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Create a new comment
+      tags:
+      - comments
   /comments/{commentId}:
     delete:
       description: Delete a comment by its unique ID
@@ -419,6 +468,47 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Activate a user account
+      tags:
+      - users
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user and return a JWT
+      parameters:
+      - description: Credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Login
       tags:
       - users
   /users/register:

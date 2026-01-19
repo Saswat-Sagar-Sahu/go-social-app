@@ -15,6 +15,8 @@ type Storage struct {
 		Create(context.Context, *User) error
 		GetByID(context.Context, int64) (*User, error)
 		GetByEmail(context.Context, string) (*User, error)
+		GetRoles(context.Context, int64) ([]string, error)
+		AssignRole(context.Context, int64, string) error
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error

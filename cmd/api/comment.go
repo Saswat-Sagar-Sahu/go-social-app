@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Saswat-Sagar-Sahu/Social/internal/auth"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
 )
@@ -12,9 +13,20 @@ import (
 type createCommentRequest struct {
 	Content string `json:"content" validate:"required,max=500"`
 	PostID  int64  `json:"post_id" validate:"required"`
-	UserID  int64  `json:"user_id" validate:"required"`
 }
 
+// createCommentsHandler handles creating a comment
+// @Summary Create a new comment
+// @Description Create a new comment on a post (authenticated)
+// @Tags comments
+// @Accept json
+// @Produce json
+// @Param post body createCommentRequest true "Comment data"
+// @Success 201 {object} store.Comment
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /comments/ [post]
 func (app *application) createCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	var payLoad createCommentRequest
 	if err := readJson(r, &payLoad); err != nil {
@@ -28,10 +40,19 @@ func (app *application) createCommentsHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// set authenticated user as comment owner
+	var uid int64
+	if u, ok := auth.UserIDFromContext(ctx); ok {
+		uid = u
+	} else {
+		app.unauthorizedResponse(w, r, ErrInvalidCredentials)
+		return
+	}
+
 	comment := &store.Comment{
 		Content: payLoad.Content,
 		PostID:  payLoad.PostID,
-		UserID:  payLoad.UserID,
+		UserID:  uid,
 	}
 
 	// validate referenced Post exists
@@ -45,8 +66,8 @@ func (app *application) createCommentsHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// validate referenced User exists
-	if _, err := app.Store.Users.GetByID(ctx, payLoad.UserID); err != nil {
+	// validate authenticated user exists
+	if _, err := app.Store.Users.GetByID(ctx, uid); err != nil {
 		switch err {
 		case store.ErrNotFound:
 			app.notFoundResponse(w, r, err)
@@ -164,6 +185,39 @@ func (app *application) deleteCommentByIdHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// authorization: only owner or admin can delete
+	_, comment := app.Store.Comments.GetByCommentId(ctx, commentID)
+	if comment == nil {
+		app.notFoundResponse(w, r, store.ErrNotFound)
+		return
+	}
+
+	uid, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		app.unauthorizedResponse(w, r, ErrInvalidCredentials)
+		return
+	}
+
+	allowed := false
+	if comment.UserID == uid {
+		allowed = true
+	} else {
+		// check admin role
+		roles, err := app.Store.Users.GetRoles(ctx, uid)
+		if err == nil {
+			for _, rr := range roles {
+				if rr == "admin" {
+					allowed = true
+					break
+				}
+			}
+		}
+	}
+	if !allowed {
+		app.forbiddenResponse(w, r, ErrInvalidCredentials)
+		return
+	}
+
 	if err := app.Store.Comments.DeleteByID(ctx, commentID); err != nil {
 		app.statusInternalServerError(w, r, err)
 		return
@@ -201,10 +255,34 @@ func (app *application) updateCommentByIdHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// apply incoming fields to the loaded comment
+	// authorization: only owner or admin can update
+	uid, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		app.unauthorizedResponse(w, r, ErrInvalidCredentials)
+		return
+	}
+	if comment.UserID != uid {
+		roles, err := app.Store.Users.GetRoles(ctx, uid)
+		if err != nil {
+			app.statusInternalServerError(w, r, err)
+			return
+		}
+		isAdmin := false
+		for _, rr := range roles {
+			if rr == "admin" {
+				isAdmin = true
+				break
+			}
+		}
+		if !isAdmin {
+			app.forbiddenResponse(w, r, ErrInvalidCredentials)
+			return
+		}
+	}
+
+	// apply incoming fields to the loaded comment (do not change owner)
 	comment.Content = payLoad.Content
 	comment.PostID = payLoad.PostID
-	comment.UserID = payLoad.UserID
 
 	// validate referenced Post exists
 	if _, err := app.Store.Posts.GetByID(ctx, payLoad.PostID); err != nil {
@@ -217,16 +295,7 @@ func (app *application) updateCommentByIdHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// validate referenced User exists
-	if _, err := app.Store.Users.GetByID(ctx, payLoad.UserID); err != nil {
-		switch err {
-		case store.ErrNotFound:
-			app.badRequestResponse(w, r, fmt.Errorf("user_id %d is invalid", payLoad.UserID))
-		default:
-			app.statusInternalServerError(w, r, err)
-		}
-		return
-	}
+	// owner remains unchanged; no user validation required
 
 	if err := app.Store.Comments.UpdateComment(ctx, comment); err != nil {
 		app.statusInternalServerError(w, r, err)

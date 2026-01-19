@@ -37,7 +37,7 @@ func (app *application) methodAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// whitelist endpoints that should remain public
 		path := r.URL.Path
-		if path == "/v1/users/register" || path == "/v1/users/login" || path == "/v1/users/activate" || path == "/v1/health" {
+		if path == "/v1/users/register" || path == "/v1/users/login" || path == "/v1/users/activate" || path == "/v1/health"  {
 			next.ServeHTTP(w, r)
 			return
 		}

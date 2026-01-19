@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Saswat-Sagar-Sahu/Social/internal/auth"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
 )
@@ -44,7 +45,11 @@ func (app *application) createPostsHandler(w http.ResponseWriter, r *http.Reques
 		Title:   payLoad.Title,
 		Content: payLoad.Content,
 		Tags:    payLoad.Tags,
-		// UserID will be NULL for now until auth is implemented
+	}
+
+	// set the authenticated user as owner if available
+	if uid, ok := auth.UserIDFromContext(ctx); ok {
+		post.UserID = &uid
 	}
 
 	if err := app.Store.Posts.Create(ctx, post); err != nil {

@@ -15,16 +15,17 @@ type Storage struct {
 		Create(context.Context, *User) error
 		GetByID(context.Context, int64) (*User, error)
 		GetByEmail(context.Context, string) (*User, error)
+		Activate(context.Context, int64) error
 		GetRoles(context.Context, int64) ([]string, error)
 		AssignRole(context.Context, int64, string) error
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error
-		GetByPostId(context.Context, int64) (error, *Comment)
-		GetByUserId(context.Context, int64) (error, *Comment)
-		GetByCommentId(context.Context, int64) (error, *Comment)
+		GetByPostID(context.Context, int64) ([]*Comment, error)
+		GetByUserID(context.Context, int64) ([]*Comment, error)
+		GetByCommentID(context.Context, int64) (*Comment, error)
 		DeleteByID(context.Context, int64) error
-		UpdateComment(context.Context, *Comment) error
+		Update(context.Context, *Comment) error
 	}
 	Followers interface {
 		AddFollower(context.Context, int64, int64) error
@@ -40,10 +41,6 @@ type Storage struct {
 		GetByToken(context.Context, string) (*Invitation, error)
 		MarkAccepted(context.Context, string, int64) error
 	}
-}
-
-func (s Storage) Post() {
-	panic("unimplemented")
 }
 
 func NewStorage(db *sql.DB) Storage {

@@ -26,7 +26,9 @@ type createPostRequest struct {
 //	@Param			post	body		createPostRequest	true	"Post data"
 //	@Success		201		{object}	store.Post
 //	@Failure		400		{object}	errorResponse
+//	@Failure		401		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
+//	@Security		BearerAuth
 //	@Router			/posts/ [post]
 func (app *application) createPostsHandler(w http.ResponseWriter, r *http.Request) {
 	var payLoad createPostRequest
@@ -47,10 +49,12 @@ func (app *application) createPostsHandler(w http.ResponseWriter, r *http.Reques
 		Tags:    payLoad.Tags,
 	}
 
-	// set the authenticated user as owner if available
-	if uid, ok := auth.UserIDFromContext(ctx); ok {
-		post.UserID = &uid
+	uid, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		app.unauthorizedResponse(w, r, ErrInvalidCredentials)
+		return
 	}
+	post.UserID = &uid
 
 	if err := app.Store.Posts.Create(ctx, post); err != nil {
 		log.Println(err)

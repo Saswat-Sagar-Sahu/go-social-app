@@ -13,6 +13,7 @@ type errorResponse struct {
 
 var ErrInvalidRequest = errors.New("invalid request payload")
 var ErrInvalidCredentials = errors.New("invalid credentials")
+var ErrAccountNotActivated = errors.New("account is not activated")
 
 func (app *application) unauthorizedResponse(w http.ResponseWriter, r *http.Request, err error) {
 	writeJsonError(w, http.StatusUnauthorized, err.Error())
@@ -32,7 +33,7 @@ func (app *application) badRequestResponse(w http.ResponseWriter, r *http.Reques
 
 func (app *application) notFoundResponse(w http.ResponseWriter, r *http.Request, err error) {
 
-	log.Printf("Bad Request occurred %s path : %s error : %s", r.Method, r.URL.Path, err)
+	log.Printf("Not Found occurred %s path : %s error : %s", r.Method, r.URL.Path, err)
 	writeJsonError(w, http.StatusNotFound, "the requested resource was not found")
 }
 

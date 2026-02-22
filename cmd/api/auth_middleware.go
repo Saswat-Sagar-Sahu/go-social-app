@@ -35,20 +35,28 @@ func (app *application) authMiddleware(next http.Handler) http.Handler {
 // methodAuthMiddleware enforces authMiddleware for POST, PUT, DELETE methods
 func (app *application) methodAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// whitelist endpoints that should remain public
 		path := r.URL.Path
-		if path == "/v1/users/register" || path == "/v1/users/login" || path == "/v1/users/activate" || path == "/v1/health"  {
-			next.ServeHTTP(w, r)
-			return
-		}
-		// allow swagger paths
-		if len(path) >= 8 && path[:8] == "/swagger" {
+
+		// allow public endpoints
+		if path == "/v1/users/register" || path == "/v1/users/login" || path == "/v1/users/activate" || path == "/v1/health" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// require auth for everything else
-		app.authMiddleware(next).ServeHTTP(w, r)
-		return
+		// allow swagger and preflight requests
+		if strings.HasPrefix(path, "/swagger") || r.Method == http.MethodOptions {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// enforce auth only for unsafe methods
+		switch r.Method {
+		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+			app.authMiddleware(next).ServeHTTP(w, r)
+			return
+		default:
+			next.ServeHTTP(w, r)
+			return
+		}
 	})
 }

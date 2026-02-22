@@ -10,6 +10,7 @@ type User struct {
 	Username  string   `json:"username"`
 	Email     string   `json:"email"`
 	Password  string   `json:"-"`
+	Activated bool     `json:"activated"`
 	CreatedAt string   `json:"created_at"`
 	Roles     []string `json:"roles,omitempty"`
 }
@@ -49,7 +50,7 @@ func (s *UsersStore) Create(ctx context.Context, user *User) error {
 }
 
 func (s *UsersStore) GetByID(ctx context.Context, userID int64) (*User, error) {
-	query := `SELECT id, username, email, password, created_at FROM users WHERE id = $1`
+	query := `SELECT id, username, email, password, activated, created_at FROM users WHERE id = $1`
 
 	user := &User{}
 	err := s.db.QueryRowContext(ctx, query, userID).Scan(
@@ -57,6 +58,7 @@ func (s *UsersStore) GetByID(ctx context.Context, userID int64) (*User, error) {
 		&user.Username,
 		&user.Email,
 		&user.Password,
+		&user.Activated,
 		&user.CreatedAt,
 	)
 	if err != nil {
@@ -71,13 +73,14 @@ func (s *UsersStore) GetByID(ctx context.Context, userID int64) (*User, error) {
 }
 
 func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error) {
-	query := `SELECT id, username, email, password, created_at FROM users WHERE email = $1`
+	query := `SELECT id, username, email, password, activated, created_at FROM users WHERE email = $1`
 	user := &User{}
 	err := s.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID,
 		&user.Username,
 		&user.Email,
 		&user.Password,
+		&user.Activated,
 		&user.CreatedAt,
 	)
 	if err != nil {
@@ -89,6 +92,23 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 		}
 	}
 	return user, nil
+}
+
+func (s *UsersStore) Activate(ctx context.Context, userID int64) error {
+	query := `UPDATE users SET activated = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+	res, err := s.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // GetRoles returns role names assigned to a user

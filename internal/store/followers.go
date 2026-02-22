@@ -19,6 +19,9 @@ type FollowersStore struct {
 var ErrResourceExists = errors.New("resource already exists")
 
 func (s *FollowersStore) AddFollower(ctx context.Context, userID, followerID int64) error {
+	if userID == followerID {
+		return ErrResourceExists
+	}
 
 	checkQuery := `SELECT 1 FROM followers WHERE user_id = $1 AND follower_id = $2`
 	var exists int
@@ -41,9 +44,16 @@ func (s *FollowersStore) AddFollower(ctx context.Context, userID, followerID int
 func (s *FollowersStore) RemoveFollower(ctx context.Context, userID, followerID int64) error {
 	query := `DELETE FROM followers WHERE user_id = $1 AND follower_id = $2`
 
-	_, err := s.db.ExecContext(ctx, query, userID, followerID)
+	res, err := s.db.ExecContext(ctx, query, userID, followerID)
 	if err != nil {
 		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrNotFound
 	}
 	return nil
 }

@@ -35,51 +35,73 @@ func (s *CommentStore) Create(ctx context.Context, comment *Comment) error {
 	return nil
 }
 
-func (s *CommentStore) GetByPostId(ctx context.Context, postID int64) (error, *Comment) {
+func (s *CommentStore) GetByPostID(ctx context.Context, postID int64) ([]*Comment, error) {
 	query := `SELECT id, post_id, user_id, content, created_at FROM comments WHERE post_id = $1 order by created_at desc`
 
-	comment := &Comment{}
-	err := s.db.QueryRowContext(ctx, query, postID).Scan(
-		&comment.ID,
-		&comment.PostID,
-		&comment.UserID,
-		&comment.Content,
-		&comment.CreatedAt,
-	)
+	rows, err := s.db.QueryContext(ctx, query, postID)
 	if err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			return ErrNotFound, nil
-		default:
-			return err, nil
-		}
+		return nil, err
 	}
-	return nil, comment
+	defer rows.Close()
+
+	comments := make([]*Comment, 0)
+	for rows.Next() {
+		comment := &Comment{}
+		if err := rows.Scan(
+			&comment.ID,
+			&comment.PostID,
+			&comment.UserID,
+			&comment.Content,
+			&comment.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(comments) == 0 {
+		return nil, ErrNotFound
+	}
+	return comments, nil
 }
 
-func (s *CommentStore) GetByUserId(ctx context.Context, userID int64) (error, *Comment) {
+func (s *CommentStore) GetByUserID(ctx context.Context, userID int64) ([]*Comment, error) {
 	query := `SELECT id, post_id, user_id, content, created_at FROM comments WHERE user_id = $1 order by created_at desc`
 
-	comment := &Comment{}
-	err := s.db.QueryRowContext(ctx, query, userID).Scan(
-		&comment.ID,
-		&comment.PostID,
-		&comment.UserID,
-		&comment.Content,
-		&comment.CreatedAt,
-	)
+	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			return ErrNotFound, nil
-		default:
-			return err, nil
-		}
+		return nil, err
 	}
-	return nil, comment
+	defer rows.Close()
+
+	comments := make([]*Comment, 0)
+	for rows.Next() {
+		comment := &Comment{}
+		if err := rows.Scan(
+			&comment.ID,
+			&comment.PostID,
+			&comment.UserID,
+			&comment.Content,
+			&comment.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		comments = append(comments, comment)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(comments) == 0 {
+		return nil, ErrNotFound
+	}
+	return comments, nil
 }
 
-func (s *CommentStore) GetByCommentId(ctx context.Context, commentID int64) (error, *Comment) {
+func (s *CommentStore) GetByCommentID(ctx context.Context, commentID int64) (*Comment, error) {
 	query := `SELECT id, post_id, user_id, content, created_at FROM comments WHERE id = $1 order by created_at desc`
 
 	comment := &Comment{}
@@ -93,12 +115,12 @@ func (s *CommentStore) GetByCommentId(ctx context.Context, commentID int64) (err
 	if err != nil {
 		switch err {
 		case sql.ErrNoRows:
-			return ErrNotFound, nil
+			return nil, ErrNotFound
 		default:
-			return err, nil
+			return nil, err
 		}
 	}
-	return nil, comment
+	return comment, nil
 }
 
 func (s *CommentStore) DeleteByID(ctx context.Context, commentID int64) error {
@@ -111,7 +133,7 @@ func (s *CommentStore) DeleteByID(ctx context.Context, commentID int64) error {
 	return nil
 }
 
-func (s *CommentStore) UpdateComment(ctx context.Context, comment *Comment) error {
+func (s *CommentStore) Update(ctx context.Context, comment *Comment) error {
 	query := `UPDATE comments SET content = $1, post_id = $2, user_id = $3 WHERE id = $4 RETURNING id`
 
 	err := s.db.QueryRowContext(

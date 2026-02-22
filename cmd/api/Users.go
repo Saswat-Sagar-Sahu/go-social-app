@@ -3,11 +3,13 @@ package main
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"time"
 
 	"log"
 
+	"github.com/Saswat-Sagar-Sahu/Social/internal/auth"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
 )
@@ -129,6 +131,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} errorResponse
 // @Failure 401 {object} errorResponse
+// @Failure 403 {object} errorResponse
 // @Failure 500 {object} errorResponse
 // @Router /users/login [post]
 func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -154,6 +157,10 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		default:
 			app.statusInternalServerError(w, r, err)
 		}
+		return
+	}
+	if !user.Activated {
+		app.forbiddenResponse(w, r, ErrAccountNotActivated)
 		return
 	}
 
@@ -217,6 +224,16 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if err := app.Store.Users.Activate(ctx, t.UserID); err != nil {
+		switch err {
+		case store.ErrNotFound:
+			app.notFoundResponse(w, r, err)
+		default:
+			app.statusInternalServerError(w, r, err)
+		}
+		return
+	}
+
 	if err := app.Store.Tokens.DeleteByToken(ctx, payload.Token); err != nil {
 		app.statusInternalServerError(w, r, err)
 		return
@@ -233,12 +250,13 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 //	@Accept			json
 //	@Produce		json
 //	@Param			userId	path		int64	true	"User ID to follow"
-//	@Param			follower	body		object{follower_id=int64}	true	"Follower ID"
 //	@Success		204
 //	@Failure		400		{object}	errorResponse
+//	@Failure		401		{object}	errorResponse
 //	@Failure		404		{object}	errorResponse
 //	@Failure		409		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
+//	@Security		BearerAuth
 //	@Router			/users/{userId}/follow [post]
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -248,14 +266,16 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var payload struct {
-		FollowerID int64 `json:"follower_id"`
-	}
-	if err := readJson(r, &payload); err != nil {
-		app.badRequestResponse(w, r, err)
+	followerID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		app.unauthorizedResponse(w, r, ErrInvalidCredentials)
 		return
 	}
-	if err := app.Store.Followers.AddFollower(ctx, userID, payload.FollowerID); err != nil {
+	if followerID == userID {
+		app.badRequestResponse(w, r, errors.New("users cannot follow themselves"))
+		return
+	}
+	if err := app.Store.Followers.AddFollower(ctx, userID, followerID); err != nil {
 		switch err {
 		case store.ErrResourceExists:
 			app.conflictResponse(w, r, err)
@@ -278,11 +298,12 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 //	@Accept			json
 //	@Produce		json
 //	@Param			userId	path		int64	true	"User ID to unfollow"
-//	@Param			follower	body		object{follower_id=int64}	true	"Follower ID"
 //	@Success		204
 //	@Failure		400		{object}	errorResponse
+//	@Failure		401		{object}	errorResponse
 //	@Failure		404		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
+//	@Security		BearerAuth
 //	@Router			/users/{userId}/unfollow [post]
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -292,14 +313,12 @@ func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var payload struct {
-		FollowerID int64 `json:"follower_id"`
-	}
-	if err := readJson(r, &payload); err != nil {
-		app.badRequestResponse(w, r, err)
+	followerID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		app.unauthorizedResponse(w, r, ErrInvalidCredentials)
 		return
 	}
-	if err := app.Store.Followers.RemoveFollower(ctx, userID, payload.FollowerID); err != nil {
+	if err := app.Store.Followers.RemoveFollower(ctx, userID, followerID); err != nil {
 		switch err {
 		case store.ErrNotFound:
 			app.notFoundResponse(w, r, err)

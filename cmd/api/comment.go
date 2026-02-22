@@ -26,6 +26,7 @@ type createCommentRequest struct {
 // @Failure 400 {object} errorResponse
 // @Failure 401 {object} errorResponse
 // @Failure 500 {object} errorResponse
+// @Security BearerAuth
 // @Router /comments/ [post]
 func (app *application) createCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	var payLoad createCommentRequest
@@ -107,13 +108,13 @@ func (app *application) getCommentsByPostIdHandler(w http.ResponseWriter, r *htt
 		app.badRequestResponse(w, r, err)
 		return
 	}
-	storeErr, comments := app.Store.Comments.GetByPostId(ctx, postID)
-	if storeErr != nil {
-		switch storeErr {
+	comments, err := app.Store.Comments.GetByPostID(ctx, postID)
+	if err != nil {
+		switch err {
 		case store.ErrNotFound:
-			app.notFoundResponse(w, r, storeErr)
+			app.notFoundResponse(w, r, err)
 		default:
-			app.statusInternalServerError(w, r, storeErr)
+			app.statusInternalServerError(w, r, err)
 		}
 		return
 	}
@@ -146,12 +147,12 @@ func parseInt64Param(_ *http.Request, s string) (int64, error) {
 //	@Router			/comments/user/{userId} [get]
 func (app *application) getCommentsByUserIdHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	commentID, err := parseInt64Param(r, chi.URLParam(r, "userId"))
+	userID, err := parseInt64Param(r, chi.URLParam(r, "userId"))
 	if err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
-	err, comment := app.Store.Comments.GetByUserId(ctx, commentID)
+	comments, err := app.Store.Comments.GetByUserID(ctx, userID)
 	if err != nil {
 		switch err {
 		case store.ErrNotFound:
@@ -161,7 +162,7 @@ func (app *application) getCommentsByUserIdHandler(w http.ResponseWriter, r *htt
 		}
 		return
 	}
-	if err := writeJson(w, http.StatusOK, comment); err != nil {
+	if err := writeJson(w, http.StatusOK, comments); err != nil {
 		app.statusInternalServerError(w, r, err)
 		return
 	}
@@ -175,7 +176,10 @@ func (app *application) getCommentsByUserIdHandler(w http.ResponseWriter, r *htt
 //	@Param			commentId	path		int64	true	"Comment ID"
 //	@Success		204
 //	@Failure		400		{object}	errorResponse
+//	@Failure		401		{object}	errorResponse
+//	@Failure		403		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
+//	@Security		BearerAuth
 //	@Router			/comments/{commentId} [delete]
 func (app *application) deleteCommentByIdHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -186,9 +190,14 @@ func (app *application) deleteCommentByIdHandler(w http.ResponseWriter, r *http.
 	}
 
 	// authorization: only owner or admin can delete
-	_, comment := app.Store.Comments.GetByCommentId(ctx, commentID)
-	if comment == nil {
-		app.notFoundResponse(w, r, store.ErrNotFound)
+	comment, err := app.Store.Comments.GetByCommentID(ctx, commentID)
+	if err != nil {
+		switch err {
+		case store.ErrNotFound:
+			app.notFoundResponse(w, r, err)
+		default:
+			app.statusInternalServerError(w, r, err)
+		}
 		return
 	}
 
@@ -226,6 +235,23 @@ func (app *application) deleteCommentByIdHandler(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// updateCommentByIdHandler updates a comment by its ID
+//
+//	@Summary		Update a comment by ID
+//	@Description	Update a comment by its unique ID
+//	@Tags			comments
+//	@Accept			json
+//	@Produce		json
+//	@Param			commentId	path		int64					true	"Comment ID"
+//	@Param			comment		body		createCommentRequest	true	"Updated comment data"
+//	@Success		200			{object}	store.Comment
+//	@Failure		400			{object}	errorResponse
+//	@Failure		401			{object}	errorResponse
+//	@Failure		403			{object}	errorResponse
+//	@Failure		404			{object}	errorResponse
+//	@Failure		500			{object}	errorResponse
+//	@Security		BearerAuth
+//	@Router			/comments/{commentId} [put]
 func (app *application) updateCommentByIdHandler(w http.ResponseWriter, r *http.Request) {
 	var payLoad createCommentRequest
 	commentID, err := parseInt64Param(r, chi.URLParam(r, "commentId"))
@@ -243,8 +269,7 @@ func (app *application) updateCommentByIdHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var comment *store.Comment
-	err, comment = app.Store.Comments.GetByCommentId(ctx, commentID)
+	comment, err := app.Store.Comments.GetByCommentID(ctx, commentID)
 	if err != nil {
 		switch err {
 		case store.ErrNotFound:
@@ -297,7 +322,7 @@ func (app *application) updateCommentByIdHandler(w http.ResponseWriter, r *http.
 
 	// owner remains unchanged; no user validation required
 
-	if err := app.Store.Comments.UpdateComment(ctx, comment); err != nil {
+	if err := app.Store.Comments.Update(ctx, comment); err != nil {
 		app.statusInternalServerError(w, r, err)
 		return
 	}

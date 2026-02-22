@@ -1,11 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
+	docs "github.com/Saswat-Sagar-Sahu/Social/docs"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/auth"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/email"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
@@ -90,9 +91,17 @@ func (app *application) mount() http.Handler {
 	r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(app.config.apiURL+"/swagger/doc.json")))
 	r.Get("/swagger/doc.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		b, err := os.ReadFile("./docs/swagger.json")
+		doc := docs.SwaggerInfo.ReadDoc()
+
+		var pretty any
+		if err := json.Unmarshal([]byte(doc), &pretty); err != nil {
+			http.Error(w, "invalid swagger json", http.StatusInternalServerError)
+			return
+		}
+
+		b, err := json.MarshalIndent(pretty, "", "    ")
 		if err != nil {
-			http.Error(w, "failed to read swagger json", http.StatusInternalServerError)
+			http.Error(w, "failed to encode swagger json", http.StatusInternalServerError)
 			return
 		}
 		_, _ = w.Write(b)

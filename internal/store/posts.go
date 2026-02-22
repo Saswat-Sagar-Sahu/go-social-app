@@ -2,11 +2,8 @@ package store
 
 import (
 	"context"
-	cryptorand "crypto/rand"
 	"database/sql"
 	"errors"
-	"log"
-	"math/big"
 
 	"github.com/lib/pq"
 )
@@ -29,16 +26,10 @@ type PostStore struct {
 }
 
 func (s *PostStore) Create(ctx context.Context, post *Post) error {
-	var userID int64
-	if post.UserID != nil && *post.UserID != 0 {
-		userID = *post.UserID
-	} else {
-		// pick a random existing user id between 1 and 5
-		userID = randomInt(1, 5)
-		post.UserID = &userID
+	if post.UserID == nil || *post.UserID == 0 {
+		return errors.New("post user_id is required")
 	}
-
-	log.Printf("User Id : %d", userID)
+	userID := *post.UserID
 
 	// cast $3 to bigint to ensure the DB receives an integer type
 	query := `INSERT INTO posts (content, title, user_id, tags) VALUES ($1, $2, $3::bigint, $4) RETURNING id, created_at, updated_at`
@@ -54,18 +45,6 @@ func (s *PostStore) Create(ctx context.Context, post *Post) error {
 		return err
 	}
 	return nil
-}
-
-func randomInt(min, max int) int64 {
-	if min >= max {
-		return int64(min)
-	}
-	span := int64(max - min + 1)
-	nBig, err := cryptorand.Int(cryptorand.Reader, big.NewInt(span))
-	if err != nil {
-		return int64(min)
-	}
-	return int64(min) + nBig.Int64()
 }
 
 func (s *PostStore) GetByID(ctx context.Context, id int64) (*Post, error) {

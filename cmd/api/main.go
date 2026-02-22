@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	docs "github.com/Saswat-Sagar-Sahu/Social/docs"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/auth"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/db"
 	"github.com/Saswat-Sagar-Sahu/Social/internal/email"
@@ -11,19 +12,20 @@ import (
 	"github.com/joho/godotenv"
 )
 
-//	@title			Swagger Social API
-//	@version		1.0
-//	@description	This is a sample server for a social media application.
-//	@termsOfService	http://swagger.io/terms/
-
-//	@contact.name	API Support
-//	@contact.url	http://www.swagger.io/support
-//	@contact.email	support@swagger.io
-
-//	@license.name	Apache 2.0
-//	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
-
-// @BasePath	/v1
+// @title Swagger Social API
+// @version 1.0
+// @description This is a sample server for a social media application.
+// @termsOfService http://swagger.io/terms/
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Provide the JWT token as: Bearer <token>
+// @BasePath /v1
 func main() {
 	godotenv.Load()
 
@@ -71,6 +73,8 @@ func main() {
 		sender,
 		authSvc,
 	}
+
+	docs.SwaggerInfo.BasePath = "/v1"
 
 	mux := app.mount()
 	log.Fatal(app.run(mux))

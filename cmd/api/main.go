@@ -56,6 +56,12 @@ func main() {
 	defer db.Close()
 	log.Println("Connected to database successfully")
 
+	// Backward-compatible startup guard for the post image feature.
+	// Keeps the API working when migrations are not applied yet.
+	if _, err := db.Exec(`ALTER TABLE IF EXISTS posts ADD COLUMN IF NOT EXISTS image_url TEXT`); err != nil {
+		log.Fatalf("failed to ensure posts.image_url column exists: %v", err)
+	}
+
 	store := store.NewStorage(db)
 
 	// construct auth service using JWT

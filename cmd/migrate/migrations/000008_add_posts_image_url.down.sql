@@ -1,0 +1,3 @@
+-- +migrate Down
+ALTER TABLE posts
+DROP COLUMN IF EXISTS image_url;

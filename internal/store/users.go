@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type User struct {
@@ -17,6 +18,12 @@ type User struct {
 
 type UsersStore struct {
 	db *sql.DB
+}
+
+type UserFilter struct {
+	Page     int
+	PageSize int
+	Name     string
 }
 
 func (s *UsersStore) Create(ctx context.Context, user *User) error {
@@ -92,6 +99,56 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (*User, error
 		}
 	}
 	return user, nil
+}
+
+func (s *UsersStore) List(ctx context.Context, filter UserFilter) ([]*User, int, error) {
+	where := ""
+	countArgs := make([]any, 0, 1)
+	if filter.Name != "" {
+		where = " WHERE username ILIKE $1 "
+		countArgs = append(countArgs, "%"+filter.Name+"%")
+	}
+
+	countQuery := "SELECT COUNT(*) FROM users" + where
+	var total int
+	if err := s.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	offset := (filter.Page - 1) * filter.PageSize
+	dataQuery := fmt.Sprintf(
+		"SELECT id, username, email, activated, created_at FROM users%s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		where,
+		len(countArgs)+1,
+		len(countArgs)+2,
+	)
+
+	args := append(countArgs, filter.PageSize, offset)
+	rows, err := s.db.QueryContext(ctx, dataQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	users := make([]*User, 0, filter.PageSize)
+	for rows.Next() {
+		user := &User{}
+		if err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.Email,
+			&user.Activated,
+			&user.CreatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		users = append(users, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }
 
 func (s *UsersStore) Activate(ctx context.Context, userID int64) error {

@@ -10,11 +10,15 @@ type Storage struct {
 		Create(context.Context, *Post) error
 		GetByID(context.Context, int64) (*Post, error)
 		GetUserFeed(context.Context, int64) ([]*Post, error)
+		GetByUserID(context.Context, int64) ([]*Post, error)
+		Update(context.Context, *Post) error
+		DeleteByID(context.Context, int64) error
 	}
 	Users interface {
 		Create(context.Context, *User) error
 		GetByID(context.Context, int64) (*User, error)
 		GetByEmail(context.Context, string) (*User, error)
+		List(context.Context, UserFilter) ([]*User, int, error)
 		Activate(context.Context, int64) error
 		GetRoles(context.Context, int64) ([]string, error)
 		AssignRole(context.Context, int64, string) error

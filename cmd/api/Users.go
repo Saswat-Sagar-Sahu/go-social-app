@@ -4,7 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"math"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"log"
@@ -13,6 +16,86 @@ import (
 	"github.com/Saswat-Sagar-Sahu/Social/internal/store"
 	"github.com/go-chi/chi/v5"
 )
+
+type listUsersResponse struct {
+	Data       []*store.User `json:"data"`
+	Page       int           `json:"page"`
+	PageSize   int           `json:"page_size"`
+	Total      int           `json:"total"`
+	TotalPages int           `json:"total_pages"`
+}
+
+// listUsersHandler retrieves paginated users with optional username filtering.
+//
+//	@Summary		List users
+//	@Description	Get paginated users. Optional `name` filters by username.
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			page		query		int		false	"Page number (default 1)"
+//	@Param			page_size	query		int		false	"Page size (default 10, max 100)"
+//	@Param			name		query		string	false	"Filter by username (contains match)"
+//	@Success		200			{object}	listUsersResponse
+//	@Failure		400			{object}	errorResponse
+//	@Failure		500			{object}	errorResponse
+//	@Router			/users [get]
+func (app *application) listUsersHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	q := r.URL.Query()
+
+	page := 1
+	pageSize := 10
+
+	if raw := strings.TrimSpace(q.Get("page")); raw != "" {
+		p, err := strconv.Atoi(raw)
+		if err != nil || p < 1 {
+			app.badRequestResponse(w, r, errors.New("page must be a positive integer"))
+			return
+		}
+		page = p
+	}
+	if raw := strings.TrimSpace(q.Get("page_size")); raw != "" {
+		s, err := strconv.Atoi(raw)
+		if err != nil || s < 1 || s > 100 {
+			app.badRequestResponse(w, r, errors.New("page_size must be between 1 and 100"))
+			return
+		}
+		pageSize = s
+	}
+
+	name := strings.TrimSpace(q.Get("name"))
+	if name == "" {
+		// allow alias query param for clients that prefer explicit field naming
+		name = strings.TrimSpace(q.Get("username"))
+	}
+
+	users, total, err := app.Store.Users.List(ctx, store.UserFilter{
+		Page:     page,
+		PageSize: pageSize,
+		Name:     name,
+	})
+	if err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = int(math.Ceil(float64(total) / float64(pageSize)))
+	}
+
+	resp := listUsersResponse{
+		Data:       users,
+		Page:       page,
+		PageSize:   pageSize,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+	if err := writeJson(w, http.StatusOK, resp); err != nil {
+		app.statusInternalServerError(w, r, err)
+		return
+	}
+}
 
 // GetUsersHandler retrieves a user by ID
 //

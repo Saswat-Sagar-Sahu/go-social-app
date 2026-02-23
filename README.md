@@ -133,6 +133,24 @@ Or use [Air](https://github.com/air-verse/air) for automatic live-reloading duri
 
 The server will start on the address specified in the `ADDRESS` environment variable (default: `:8080`).
 
+### Frontend (React UI)
+
+A React UI is available in the `web/` folder and includes:
+- Register page
+- Activate account page
+- Login page
+- Feed page (uses authenticated API request)
+
+Run it from project root:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+The Vite dev server proxies `/v1/*` requests to `http://localhost:8080`, so run the Go API and the React UI together during development.
+
 ### Seeding the database
 
 Prerequisites: database is running and migrations applied. You can set the DB URL in `.env` or via `DB_ADDR`.
@@ -186,6 +204,12 @@ Notes:
   - Create a new post
   - Request body: `{"title": "string", "content": "string"}`
   - Response: Created post object
+- **PUT** `/v1/posts/{postId}`
+  - Update a post by ID (owner or admin)
+- **DELETE** `/v1/posts/{postId}`
+  - Delete a post by ID (owner or admin)
+- **GET** `/v1/posts/me`
+  - Retrieve posts created by the authenticated user
 
 ### Users
 - **POST** `/v1/users` (planned)
@@ -225,4 +249,3 @@ To build the application:
 ```bash
 go build -o bin/main cmd/api/*.go
 ```
-

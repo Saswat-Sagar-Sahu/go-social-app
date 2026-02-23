@@ -30,6 +30,21 @@ definitions:
       error:
         type: string
     type: object
+  main.listUsersResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/store.User'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
   store.Comment:
     properties:
       content:
@@ -360,6 +375,42 @@ paths:
       summary: Retrieve a post by ID
       tags:
       - posts
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated users. Optional `name` filters by username.
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 10, max 100)
+        in: query
+        name: page_size
+        type: integer
+      - description: Filter by username (contains match)
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.listUsersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: List users
+      tags:
+      - users
   /users/{userId}:
     get:
       consumes:
